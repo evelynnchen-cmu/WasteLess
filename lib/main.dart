@@ -120,23 +120,17 @@ class _MyAppState extends State<MyApp> {
     final FilePickerResult? result = await FilePicker.platform.pickFiles();
 
     if (result != null) {
-      print('File selected');
-      print('File name: ${result.files.first.name}');
-      print('File bytes: ${result.files.first.bytes}');
-
-      File file = File(result.files.first.path!);
-      List<int> bytes = await file.readAsBytes();
-
       setState(() {
-        selectedFile = result.files.first.name;
-        image = Uint8List.fromList(bytes);
-
-        assert(image != null);
+        selectedFile = result.files.single.name; 
+        image = result.files.single.bytes; 
       });
 
       _analyzeImage();
     } else {
-      print('No file selected successfully');
+      setState(() {
+        selectedFile = '';
+        image = null; 
+      });
     }
   }
 
@@ -247,7 +241,9 @@ class _MyAppState extends State<MyApp> {
           children: [
             SizedBox(height: 20),
             Text(
-              image == null ? 'No image uploaded' : 'Uploaded: $selectedFile',
+              selectedFile.isEmpty
+                  ? 'No image uploaded'
+                  : 'Uploaded: $selectedFile',
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             Padding(
@@ -390,53 +386,4 @@ class DataDisplayScreen extends StatelessWidget {
       ),
     );
   }
-
-  // Widget build(BuildContext context) {
-  //   List<Widget> dataWidgets = combinedData.entries.map((entry) {
-  //     return Padding(
-  //       padding: const EdgeInsets.only(bottom: 8.0),
-  //       child: Text('${entry.key}: ${entry.value.toString()}',
-  //           style: TextStyle(fontSize: 16)),
-  //     );
-  //   }).toList();
-
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: Text('Your Item Evaluation'),
-  //       backgroundColor: WLGreen,
-  //       automaticallyImplyLeading: false,
-  //     ),
-  //     body: Container(
-  //       padding: EdgeInsets.all(20.0),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text("Your item evaluation:",
-  //               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-  //           SizedBox(height: 20),
-  //           Container(
-  //             padding: EdgeInsets.all(10.0),
-  //             decoration: BoxDecoration(
-  //                 border: Border.all(color: WLGreen),
-  //                 borderRadius: BorderRadius.circular(5.0)),
-  //             child: Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: dataWidgets),
-  //           ),
-  //           SizedBox(height: 20),
-  //           Center(
-  //             child: ElevatedButton(
-  //               onPressed: () => Navigator.of(context).pop(),
-  //               style: ElevatedButton.styleFrom(
-  //                 backgroundColor: WLGreen,
-  //                 foregroundColor: Colors.white,
-  //               ),
-  //               child: Text('Evaluate Another Item'),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 }
