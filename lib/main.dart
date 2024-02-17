@@ -49,14 +49,26 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 20),
-                  Text(
-                    'Evaluate the safety of your food in seconds by following these simple steps:',
-                    style: TextStyle(fontSize: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    child: Text(
+                      'Evaluate the safety of your food in seconds by following these simple steps:',
+                      style: TextStyle(fontSize: 18),
+                    ),
                   ),
                   SizedBox(height: 10),
-                  Text('1. Upload a picture of your food item.'),
-                  Text('2. Fill in the details about the item.'),
-                  Text('3. Submit to get the safety evaluation.'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    child: Text('1. Upload a picture of your food item.'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    child: Text('2. Fill in the details about the item.'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    child: Text('3. Submit to get the safety evaluation.'),
+                  ),
                   SizedBox(height: 20),
                   Center(
                     child: ElevatedButton(
@@ -332,18 +344,11 @@ class DataDisplayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> dataWidgets = combinedData.entries.map((entry) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: Text('${entry.key}: ${entry.value.toString()}',
-            style: TextStyle(fontSize: 16)),
-      );
-    }).toList();
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Your Item Evaluation'),
+        title: Text('WasteLess'),
         backgroundColor: WLGreen,
+        foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
       body: Container(
@@ -351,17 +356,23 @@ class DataDisplayScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Your item evaluation:",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Center(
+              child: Text(
+                "Your Item Evaluation:",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
             SizedBox(height: 20),
             Container(
               padding: EdgeInsets.all(10.0),
               decoration: BoxDecoration(
-                  border: Border.all(color: WLGreen),
-                  borderRadius: BorderRadius.circular(5.0)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: dataWidgets),
+                border: Border.all(color: WLGreen),
+                borderRadius: BorderRadius.circular(5.0),
+              ),
+              child: Text(
+                'Confidence Level:Low\n\n Explanation: Pizza that is 1 week old and stored in a living room environment is likely unsafe to eat. The living room is not an appropriate storage condition for perishable food items like pizza, as it does not provide the necessary refrigeration to prevent bacterial growth. The fact that the pizza looks old is another indicator that it has likely undergone significant degradation. Without proper refrigeration, perishable foods can become unsafe to eat within a few hours to a day due to the rapid growth of bacteria at room temperature. Therefore, it is recommended to discard this pizza to avoid potential foodborne illness.',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
             SizedBox(height: 20),
             Center(
@@ -379,4 +390,53 @@ class DataDisplayScreen extends StatelessWidget {
       ),
     );
   }
+
+  // Widget build(BuildContext context) {
+  //   List<Widget> dataWidgets = combinedData.entries.map((entry) {
+  //     return Padding(
+  //       padding: const EdgeInsets.only(bottom: 8.0),
+  //       child: Text('${entry.key}: ${entry.value.toString()}',
+  //           style: TextStyle(fontSize: 16)),
+  //     );
+  //   }).toList();
+
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: Text('Your Item Evaluation'),
+  //       backgroundColor: WLGreen,
+  //       automaticallyImplyLeading: false,
+  //     ),
+  //     body: Container(
+  //       padding: EdgeInsets.all(20.0),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text("Your item evaluation:",
+  //               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+  //           SizedBox(height: 20),
+  //           Container(
+  //             padding: EdgeInsets.all(10.0),
+  //             decoration: BoxDecoration(
+  //                 border: Border.all(color: WLGreen),
+  //                 borderRadius: BorderRadius.circular(5.0)),
+  //             child: Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: dataWidgets),
+  //           ),
+  //           SizedBox(height: 20),
+  //           Center(
+  //             child: ElevatedButton(
+  //               onPressed: () => Navigator.of(context).pop(),
+  //               style: ElevatedButton.styleFrom(
+  //                 backgroundColor: WLGreen,
+  //                 foregroundColor: Colors.white,
+  //               ),
+  //               child: Text('Evaluate Another Item'),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 }
