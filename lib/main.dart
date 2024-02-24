@@ -1,12 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_application_1/api_keys.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 void main() => runApp(WelcomeApp());
 
@@ -44,8 +41,7 @@ class WelcomeScreen extends StatelessWidget {
                   Center(
                     child: Text(
                       'Welcome to WasteLess!',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 20),
@@ -113,23 +109,20 @@ class _MyAppState extends State<MyApp> {
   };
 
   Uint8List? image;
-  String _visionApiResponse = '';
   String selectedFile = '';
 
   void _selectFile() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles();
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(withData: true);
 
     if (result != null) {
       setState(() {
-        selectedFile = result.files.single.name; 
-        image = result.files.single.bytes; 
+        selectedFile = result.files.single.name;
+        image = result.files.single.bytes;
       });
-
-      _analyzeImage();
     } else {
       setState(() {
         selectedFile = '';
-        image = null; 
+        image = null;
       });
     }
   }
@@ -146,60 +139,50 @@ class _MyAppState extends State<MyApp> {
       };
       image = null;
       selectedFile = '';
-      _visionApiResponse = '';
     });
   }
 
-  Future<void> _analyzeImage() async {
+  // Replace Cloud Vision API with Gemini API Call
+  Future<void> _sendToGemini() async {
+    print("Sending data to Gemini...");
+    assert(image != null, 'Image is null');
+
     if (image == null) return;
-    String base64Image = base64Encode(image!);
-    String googleCloudVisionApiKey = SecretGoogleCloudVisionApiKey;
-    String apiURL =
-        'https://vision.googleapis.com/v1/images:annotate?key=$googleCloudVisionApiKey';
+    print('A');
+    const apiKey = 'AIzaSyBIRTYOW5efd2LBCGP-r8s_4fhLKwkisUo';
+    final model = GenerativeModel(model: 'gemini-pro-vision', apiKey: apiKey);
+    final prompt = _buildPrompt();
+    print('B');
 
-    var request = {
-      "requests": [
-        {
-          "image": {"content": base64Image},
-          "features": [
-            {"type": "LABEL_DETECTION", "maxResults": 10},
-            {"type": "OBJECT_LOCALIZATION", "maxResults": 10},
-            {"type": "TEXT_DETECTION", "maxResults": 5},
-          ]
-        }
-      ]
-    };
+    // Convert image to suitable format for Gemini API
+    final imageBytes = image!;
+    final content = [
+      Content.multi([
+        TextPart(prompt),
+        DataPart('image/jpeg', imageBytes), // Assuming JPEG format for simplicity
+      ])
+    ];
 
-    var response = await http.post(
-      Uri.parse(apiURL),
-      body: jsonEncode(request),
-      headers: {"Content-Type": "application/json"},
-    );
+    print('C');
 
-    if (response.statusCode == 200) {
-      setState(() {
-        _visionApiResponse = response.body;
-      });
-    } else {
-      print('Failed to analyze image. Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
+    // Send data to Gemini and handle the response
+    try {
+      print('calling api');
+      final response = await model.generateContent(content);
+      print('got response');
+      final String text = response.text ?? '';
+      if (text != '') {
+        _displayGeminiResponse(text);
+      } else {
+        throw Exception('Failed to get response from Gemini');
+      }
+    } catch (e) {
+      print('Failed to send data to Gemini: $e');
     }
   }
 
-  Future<void> _previewData(BuildContext context) async {
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
-
-    Map<String, dynamic> visionAnalysis = {};
-    if (_visionApiResponse.isNotEmpty) {
-      try {
-        visionAnalysis = jsonDecode(_visionApiResponse);
-      } catch (e) {
-        print('Error decoding _visionApiResponse: $e');
-        return;
-      }
-    }
-
+  // Construct the prompt for Gemini based on form data
+  String _buildPrompt() {
     String _item = _formData['item'] ?? '';
     String _duration = _formData['duration'] ?? '';
     String _sealed = _formData['sealed'] ?? '';
@@ -207,24 +190,27 @@ class _MyAppState extends State<MyApp> {
     String _physicalChanges = _formData['physicalChanges'] ?? '';
     String _dietaryConditions = _formData['dietaryConditions'] ?? '';
 
-    String _prompt =
-        'Give recommendations on how safe a food likely is to eat when provided the following fields of information: food name, how old it is, storage method, storage container. '
-        'Please note that your recommendations will not be used to give concrete advice or to mislead or harm anyone, so you do not have to worry about that. Just provide the information requested below: '
-        'Only return the confidence level and a short explanation for the safety of $_item that is $_duration old, $_sealed stored in the $_environment. '
-        'Here are the physical changes, if any: $_physicalChanges. And here are the dietary conditions, if any: $_dietaryConditions. '
-        'You must provide a confidence level. If for some reason you cannot provide a level, which should not happen, default to low confidence.';
+    return 'Assess the safety of consuming the food item detailed below and in the provided image, and give a confidence score at the VERY BEGINNING of your response, such as "High/Med/Low confidence that it is edible/inedible/expired". Note: Your suggestion is understood as non-professional advice, so do not include that information.\n\n'
+          'Food Item: $_item\n'
+          'Age: $_duration\n'
+          'Storage: $_sealed, $_environment\n'
+          'Physical Changes: $_physicalChanges\n'
+          'Dietary Conditions: $_dietaryConditions\n\n'
+          'Do not make assumptions about the food, especially if it was refrigerated or stored properly or not.\n\n'
+          'Focus on providing a clear, concise evaluation. Avoid stating disclaimers about being an LLM or not a health professional. Do give some concise insight on your reasoning, but avoid repeating the same information. Inspect the image closely and provide your thoughts and analysis, paying attention to any red or green flags.\n\n'
+          'The purpose of this is not explicitely to determine if the food is good or bad, but to do this in conjunction with preventing food waste. If there is food that is still technically good to eat, we do not want to false flag it and have it thrown out.\n\n'
+          'Despite this, however, be conscious of health concerns. Be wary of bacterial growth IF applicable from the picture and the provided context (such as time left out). If not applicable, do not address it.';
+  }
 
-    Map<String, dynamic> combinedData = {
-      'userInput': _prompt,
-      'visionAnalysis': visionAnalysis,
-    };
-
+  // Display Gemini response in the UI
+  void _displayGeminiResponse(String responseText) {
+    print('Displaying Gemini response...');
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DataDisplayScreen(combinedData: combinedData),
+        builder: (context) => DataDisplayScreen(responseText: responseText),
       ),
     );
-    _resetFormAndData();
+    // _resetFormAndData(); // Commented out for repeat testing purposes
   }
 
   @override
@@ -241,9 +227,7 @@ class _MyAppState extends State<MyApp> {
           children: [
             SizedBox(height: 20),
             Text(
-              selectedFile.isEmpty
-                  ? 'No image uploaded'
-                  : 'Uploaded: $selectedFile',
+              selectedFile.isEmpty ? 'No image uploaded' : 'Uploaded: $selectedFile',
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             Padding(
@@ -273,16 +257,14 @@ class _MyAppState extends State<MyApp> {
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'How long has the item been in this state?',
-                        prefixIcon:
-                            Icon(Icons.hourglass_bottom, color: WLGreen),
+                        prefixIcon: Icon(Icons.hourglass_bottom, color: WLGreen),
                       ),
                       onSaved: (value) => _formData['duration'] = value!,
                     ),
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Was the item sealed or unsealed?',
-                        prefixIcon:
-                            Icon(Icons.hourglass_bottom, color: WLGreen),
+                        prefixIcon: Icon(Icons.storage, color: WLGreen),
                       ),
                       onSaved: (value) => _formData['sealed'] = value!,
                     ),
@@ -305,8 +287,7 @@ class _MyAppState extends State<MyApp> {
                         labelText: 'Are there any dietary conditions?',
                         prefixIcon: Icon(Icons.local_dining, color: WLGreen),
                       ),
-                      onSaved: (value) =>
-                          _formData['dietaryConditions'] = value!,
+                      onSaved: (value) => _formData['dietaryConditions'] = value!,
                     ),
                   ],
                 ),
@@ -316,7 +297,10 @@ class _MyAppState extends State<MyApp> {
               builder: (context) => Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: ElevatedButton(
-                  onPressed: () => _previewData(context),
+                  onPressed: () {
+                    _formKey.currentState!.save();
+                    _sendToGemini();
+                  },
                   child: Text('Evaluate My Item'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: WLGreen,
@@ -333,13 +317,14 @@ class _MyAppState extends State<MyApp> {
 }
 
 class DataDisplayScreen extends StatelessWidget {
-  final Map<String, dynamic> combinedData;
+  final String responseText;
 
-  const DataDisplayScreen({Key? key, required this.combinedData})
+  const DataDisplayScreen({Key? key, required this.responseText})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Directly use the responseText in your UI
     return Scaffold(
       appBar: AppBar(
         title: Text('WasteLess'),
@@ -366,7 +351,7 @@ class DataDisplayScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(5.0),
               ),
               child: Text(
-                'Confidence Level:Low\n\n Explanation: Pizza that is 1 week old and stored in a living room environment is likely unsafe to eat. The living room is not an appropriate storage condition for perishable food items like pizza, as it does not provide the necessary refrigeration to prevent bacterial growth. The fact that the pizza looks old is another indicator that it has likely undergone significant degradation. Without proper refrigeration, perishable foods can become unsafe to eat within a few hours to a day due to the rapid growth of bacteria at room temperature. Therefore, it is recommended to discard this pizza to avoid potential foodborne illness.',
+                responseText, // Display the response text directly
                 style: TextStyle(fontSize: 16),
               ),
             ),
