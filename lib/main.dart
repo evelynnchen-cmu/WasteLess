@@ -41,7 +41,8 @@ class WelcomeScreen extends StatelessWidget {
                   Center(
                     child: Text(
                       'Welcome to WasteLess!',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 20),
@@ -110,9 +111,12 @@ class _MyAppState extends State<MyApp> {
 
   Uint8List? image;
   String selectedFile = '';
+  bool _isLoading = false;
+  String _errorMessage = ''; 
 
   void _selectFile() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(withData: true);
+    final FilePickerResult? result =
+        await FilePicker.platform.pickFiles(withData: true);
 
     if (result != null) {
       setState(() {
@@ -139,31 +143,73 @@ class _MyAppState extends State<MyApp> {
       };
       image = null;
       selectedFile = '';
+      _errorMessage = ''; 
     });
   }
 
-  // Replace Cloud Vision API with Gemini API Call
+  void _validateInput() {
+    List<String> missingFields = [];
+    setState(() {
+        _errorMessage = '';
+      });
+
+    if (_formData['item'] == null || _formData['item']!.isEmpty) {
+      missingFields.add('Item');
+    }
+    if (_formData['duration'] == null || _formData['duration']!.isEmpty) {
+      missingFields.add('Duration');
+    }
+    if (_formData['sealed'] == null || _formData['sealed']!.isEmpty) {
+      missingFields.add('Sealed/Unsealed');
+    }
+    if (_formData['environment'] == null || _formData['environment']!.isEmpty) {
+      missingFields.add('Environment');
+    }
+    if (_formData['physicalChanges'] == null ||
+        _formData['physicalChanges']!.isEmpty) {
+      missingFields.add('Physical Changes');
+    }
+    if (_formData['dietaryConditions'] == null ||
+        _formData['dietaryConditions']!.isEmpty) {
+      missingFields.add('Dietary Conditions');
+    }
+    if (image == null) {
+      missingFields.add('Image');
+    }
+
+    if (missingFields.isNotEmpty) {
+      String missingFieldsString = missingFields.join(', ');
+      setState(() {
+        _errorMessage =
+            'Please fill out the missing fields: $missingFieldsString.';
+      });
+      return; 
+    }
+
+    _sendToGemini();
+  }
+
   Future<void> _sendToGemini() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     print("Sending data to Gemini...");
     assert(image != null, 'Image is null');
 
     if (image == null) return;
-    print('A');
     const apiKey = 'AIzaSyBIRTYOW5efd2LBCGP-r8s_4fhLKwkisUo';
     final model = GenerativeModel(model: 'gemini-pro-vision', apiKey: apiKey);
     final prompt = _buildPrompt();
-    print('B');
 
     // Convert image to suitable format for Gemini API
     final imageBytes = image!;
     final content = [
       Content.multi([
         TextPart(prompt),
-        DataPart('image/jpeg', imageBytes), // Assuming JPEG format for simplicity
+        DataPart('image/jpeg', imageBytes),
       ])
     ];
-
-    print('C');
 
     // Send data to Gemini and handle the response
     try {
@@ -179,6 +225,10 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       print('Failed to send data to Gemini: $e');
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   // Construct the prompt for Gemini based on form data
@@ -191,18 +241,18 @@ class _MyAppState extends State<MyApp> {
     String _dietaryConditions = _formData['dietaryConditions'] ?? '';
 
     return 'Assess the safety of consuming the food item detailed below and in the provided image, and give a confidence score at the VERY BEGINNING of your response, such as "High/Med/Low confidence that it is edible/inedible/expired". Note: Your suggestion is understood as non-professional advice, so do not include that information.\n\n'
-          'Food Item: $_item\n'
-          'Age: $_duration\n'
-          'Storage: $_sealed, $_environment\n'
-          'Physical Changes: $_physicalChanges\n'
-          'Dietary Conditions: $_dietaryConditions\n\n'
-          'Do not make assumptions about the food, especially if it was refrigerated or stored properly or not.\n\n'
-          'Focus on providing a clear, concise evaluation. Avoid stating disclaimers about being an LLM or not a health professional. Do give some concise insight on your reasoning, but avoid repeating the same information. Inspect the image closely and provide your thoughts and analysis, paying attention to any red or green flags.\n\n'
-          'The purpose of this is not explicitely to determine if the food is good or bad, but to do this in conjunction with preventing food waste. If there is food that is still technically good to eat, we do not want to false flag it and have it thrown out.\n\n'
-          'Despite this, however, be conscious of health concerns. Be wary of bacterial growth IF applicable from the picture and the provided context (such as time left out). If not applicable, do not address it.';
+        'Food Item: $_item\n'
+        'Age: $_duration\n'
+        'Storage: $_sealed, $_environment\n'
+        'Physical Changes: $_physicalChanges\n'
+        'Dietary Conditions: $_dietaryConditions\n\n'
+        'Do not make assumptions about the food, especially if it was refrigerated or stored properly or not.\n\n'
+        'Focus on providing a clear, concise evaluation. Avoid stating disclaimers about being an LLM or not a health professional. Do give some concise insight on your reasoning, but avoid repeating the same information. Inspect the image closely and provide your thoughts and analysis, paying attention to any red or green flags.\n\n'
+        'The purpose of this is not explicitely to determine if the food is good or bad, but to do this in conjunction with preventing food waste. If there is food that is still technically good to eat, we do not want to false flag it and have it thrown out.\n\n'
+        'Despite this, however, be conscious of health concerns. Be wary of bacterial growth IF applicable from the picture and the provided context (such as time left out). If not applicable, do not address it.';
   }
 
-  // Display Gemini response in the UI
+  // Display Gemini response
   void _displayGeminiResponse(String responseText) {
     print('Displaying Gemini response...');
     Navigator.of(context).push(
@@ -210,7 +260,7 @@ class _MyAppState extends State<MyApp> {
         builder: (context) => DataDisplayScreen(responseText: responseText),
       ),
     );
-    // _resetFormAndData(); // Commented out for repeat testing purposes
+    _resetFormAndData();
   }
 
   @override
@@ -227,7 +277,9 @@ class _MyAppState extends State<MyApp> {
           children: [
             SizedBox(height: 20),
             Text(
-              selectedFile.isEmpty ? 'No image uploaded' : 'Uploaded: $selectedFile',
+              selectedFile.isEmpty
+                  ? 'No image uploaded'
+                  : 'Uploaded: $selectedFile',
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             Padding(
@@ -257,7 +309,8 @@ class _MyAppState extends State<MyApp> {
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'How long has the item been in this state?',
-                        prefixIcon: Icon(Icons.hourglass_bottom, color: WLGreen),
+                        prefixIcon:
+                            Icon(Icons.hourglass_bottom, color: WLGreen),
                       ),
                       onSaved: (value) => _formData['duration'] = value!,
                     ),
@@ -287,7 +340,8 @@ class _MyAppState extends State<MyApp> {
                         labelText: 'Are there any dietary conditions?',
                         prefixIcon: Icon(Icons.local_dining, color: WLGreen),
                       ),
-                      onSaved: (value) => _formData['dietaryConditions'] = value!,
+                      onSaved: (value) =>
+                          _formData['dietaryConditions'] = value!,
                     ),
                   ],
                 ),
@@ -296,17 +350,29 @@ class _MyAppState extends State<MyApp> {
             Builder(
               builder: (context) => Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    _formKey.currentState!.save();
-                    _sendToGemini();
-                  },
-                  child: Text('Evaluate My Item'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WLGreen,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+                child: _isLoading
+                    ? Center(
+                        child:
+                            CircularProgressIndicator()) // Show loading indicator
+                    : ElevatedButton(
+                        onPressed: () {
+                          _formKey.currentState!.save();
+                          _validateInput();
+                        },
+                        child: Text('Evaluate My Item'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: WLGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+            if (_errorMessage.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                _errorMessage,
+                style: TextStyle(color: Colors.red, fontSize: 16),
               ),
             ),
           ],
@@ -324,7 +390,6 @@ class DataDisplayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Directly use the responseText in your UI
     return Scaffold(
       appBar: AppBar(
         title: Text('WasteLess'),
@@ -351,7 +416,7 @@ class DataDisplayScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(5.0),
               ),
               child: Text(
-                responseText, // Display the response text directly
+                responseText,
                 style: TextStyle(fontSize: 16),
               ),
             ),
