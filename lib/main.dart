@@ -112,7 +112,7 @@ class _MyAppState extends State<MyApp> {
   Uint8List? image;
   String selectedFile = '';
   bool _isLoading = false;
-  String _errorMessage = ''; 
+  String _errorMessage = '';
 
   void _selectFile() async {
     final FilePickerResult? result =
@@ -143,15 +143,15 @@ class _MyAppState extends State<MyApp> {
       };
       image = null;
       selectedFile = '';
-      _errorMessage = ''; 
+      _errorMessage = '';
     });
   }
 
   void _validateInput() {
     List<String> missingFields = [];
     setState(() {
-        _errorMessage = '';
-      });
+      _errorMessage = '';
+    });
 
     if (_formData['item'] == null || _formData['item']!.isEmpty) {
       missingFields.add('Item');
@@ -183,7 +183,7 @@ class _MyAppState extends State<MyApp> {
         _errorMessage =
             'Please fill out the missing fields: $missingFieldsString.';
       });
-      return; 
+      return;
     }
 
     _sendToGemini();
@@ -276,11 +276,27 @@ class _MyAppState extends State<MyApp> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(height: 20),
-            Text(
-              selectedFile.isEmpty
-                  ? 'No image uploaded'
-                  : 'Uploaded: $selectedFile',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+            // Display the image or the placeholder
+            Container(
+              width: 150, // Adjust the size to what you find suitable
+              height: 150,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: image != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        image!,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Icon(
+                      Icons.image, // Placeholder icon
+                      size: 100,
+                      color: Colors.grey,
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -368,13 +384,13 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             if (_errorMessage.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                _errorMessage,
-                style: TextStyle(color: Colors.red, fontSize: 16),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  _errorMessage,
+                  style: TextStyle(color: Colors.red, fontSize: 16),
+                ),
               ),
-            ),
           ],
         ),
       ),
