@@ -1,7 +1,9 @@
 # WasteLess - 2024 Google Student Developer Club Solution Challenge
 
 Slide Deck: https://www.canva.com/design/DAF922zxXBg/jfgdQOfuJvUd_oXgCLvv8g/edit?utm_content=DAF922zxXBg&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 Raspberry Pi repository: https://github.com/RussellBustamante/NoWasteAI/tree/main
+
 Our Raspberry Pi component was developed in February 2024 at Stanford's Treehacks. Special thanks to the associated team members Michael Qi, Jhonathan Herrera, and Joyce Zhou.
 
 **About:**  
